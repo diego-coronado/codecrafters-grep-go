@@ -34,11 +34,10 @@ func main() {
 	}
 
 	// default exit code is 0 which means success
-	os.Exit(0)
 }
 
 func matchLine(line []byte, pattern string) (bool, error) {
-	if utf8.RuneCountInString(pattern) != 1 {
+	if utf8.RuneCountInString(pattern) == 0 {
 		return false, fmt.Errorf("unsupported pattern: %q", pattern)
 	}
 
@@ -47,7 +46,11 @@ func matchLine(line []byte, pattern string) (bool, error) {
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
 	fmt.Println("Logs from your program will appear here!")
 
-	ok = bytes.ContainsAny(line, pattern)
+	if pattern == "\\d" {
+		ok = bytes.ContainsAny(line, "0123456789")
+	} else {
+		ok = bytes.ContainsAny(line, pattern)
+	}
 
 	return ok, nil
 }
