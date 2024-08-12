@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -30,6 +31,7 @@ func main() {
 	}
 
 	if !ok {
+		fmt.Println("error")
 		os.Exit(1)
 	}
 
@@ -46,9 +48,19 @@ func matchLine(line []byte, pattern string) (bool, error) {
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
 	fmt.Println("Logs from your program will appear here!")
 
-	if pattern == "\\d" {
+	switch pattern {
+	case "\\d":
 		ok = bytes.ContainsAny(line, "0123456789")
-	} else {
+	case "\\w":
+		strLine := string(line)
+		checkStrLn := 0
+		for _, char := range strLine {
+			if unicode.IsLetter(char) || unicode.IsDigit(char) || string(char) == "_" {
+				checkStrLn++
+			}
+		}
+		ok = checkStrLn > 0
+	default:
 		ok = bytes.ContainsAny(line, pattern)
 	}
 
