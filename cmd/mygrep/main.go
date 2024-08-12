@@ -57,19 +57,20 @@ func matchLine(line string, pattern string) (bool, error) {
 }
 
 func matchPattern(line string, pattern string, pos int) bool {
-	length := len(pattern)
-	linePos := pos
+	patternLength := len(pattern)
+	lineLength := len(line)
+	lineIndex := pos
 
-	for i := 0; i < length; i++ {
-		if linePos >= len(line) {
-			return false
+	for i := 0; i < patternLength; i++ {
+		if lineIndex >= lineLength {
+			return pattern[i] == '$'
 		}
 
-		if pattern[i] == '\\' && i+1 < length {
+		if pattern[i] == '\\' && i+1 < patternLength {
 			ptrChr := pattern[i+1]
-			if ptrChr == 'w' && !(unicode.IsLetter(rune(line[linePos])) || unicode.IsDigit(rune(line[linePos])) || line[linePos] == '_') {
+			if ptrChr == 'w' && !(unicode.IsLetter(rune(line[lineIndex])) || unicode.IsDigit(rune(line[lineIndex])) || line[lineIndex] == '_') {
 				return false
-			} else if ptrChr == 'd' && !unicode.IsDigit(rune(line[linePos])) {
+			} else if ptrChr == 'd' && !unicode.IsDigit(rune(line[lineIndex])) {
 				return false
 			} else {
 				i++
@@ -77,22 +78,22 @@ func matchPattern(line string, pattern string, pos int) bool {
 		} else if pattern[i] == '[' {
 			closeSqrBracketPos := strings.IndexAny(pattern[i:], "]")
 			matchPattern := pattern[i+1 : closeSqrBracketPos]
-			if i+1 < length && pattern[i+1] == '^' {
-				if strings.Contains(matchPattern, string(line[linePos])) {
+			if i+1 < patternLength && pattern[i+1] == '^' {
+				if strings.Contains(matchPattern, string(line[lineIndex])) {
 					return false
 				}
 			} else {
-				if !strings.Contains(matchPattern, string(line[linePos])) {
+				if !strings.Contains(matchPattern, string(line[lineIndex])) {
 					return false
 				}
 			}
 			i = closeSqrBracketPos
 		} else { // base case
-			if line[linePos] != pattern[i] {
+			if lineIndex < lineLength && line[lineIndex] != pattern[i] {
 				return false
 			}
 		}
-		linePos++
+		lineIndex++
 	}
 
 	return true
