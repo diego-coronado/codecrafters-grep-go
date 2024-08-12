@@ -48,20 +48,22 @@ func matchLine(line []byte, pattern string) (bool, error) {
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
 	fmt.Println("Logs from your program will appear here!")
 
-	switch pattern {
-	case "\\d":
+	if pattern == "\\d" {
 		ok = bytes.ContainsAny(line, "0123456789")
-	case "\\w":
+	} else if pattern == "\\w" {
 		strLine := string(line)
 		checkStrLn := 0
 		for _, char := range strLine {
-			if unicode.IsLetter(char) || unicode.IsDigit(char) || string(char) == "_" {
+			if unicode.IsLetter(char) || unicode.IsDigit(char) || char == '_' {
 				checkStrLn++
 			}
 		}
 		ok = checkStrLn > 0
-	default:
+	} else if len(pattern) > 2 && pattern[0] == '[' && pattern[len(pattern)-1] == ']' {
+		ok = bytes.ContainsAny(line, pattern[1:len(pattern)-1])
+	} else {
 		ok = bytes.ContainsAny(line, pattern)
+
 	}
 
 	return ok, nil
