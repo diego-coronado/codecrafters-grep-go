@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -25,7 +24,7 @@ func main() {
 		os.Exit(2)
 	}
 
-	ok, err := matchLine(line, pattern)
+	ok, err := matchLine(string(line), pattern)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(2)
@@ -39,42 +38,58 @@ func main() {
 	// default exit code is 0 which means success
 }
 
-func matchLine(line []byte, pattern string) (bool, error) {
+func matchLine(line string, pattern string) (bool, error) {
 	if utf8.RuneCountInString(pattern) == 0 {
 		return false, fmt.Errorf("unsupported pattern: %q", pattern)
 	}
 
-	var ok bool
-
-	// You can use print statements as follows for debugging, they'll be visible when running tests.
-	fmt.Println("Logs from your program will appear here!")
-
-	if pattern == "\\d" {
-		ok = bytes.ContainsAny(line, "0123456789")
-	} else if pattern == "\\w" {
-		strLine := string(line)
-		checkStrLn := 0
-		for _, char := range strLine {
-			if unicode.IsLetter(char) || unicode.IsDigit(char) || char == '_' {
-				checkStrLn++
-			}
+	for i := 0; i < len(line); i++ {
+		if matchPattern(line, pattern, i) {
+			return true, nil
 		}
-		ok = checkStrLn > 0
-	} else if len(pattern) > 2 && pattern[0] == '[' && pattern[len(pattern)-1] == ']' {
-		if pattern[1] == '^' { // negative character group
-			strLine := string(line)
-			ptrn := pattern[2 : len(pattern)-1]
-			for _, char := range ptrn {
-				strLine = strings.ReplaceAll(strLine, string(char), "")
-			}
-			ok = len(strLine) > 0
-		} else { // positive character group
-			ok = bytes.ContainsAny(line, pattern[1:len(pattern)-1])
-		}
-	} else {
-		ok = bytes.ContainsAny(line, pattern)
-
 	}
 
-	return ok, nil
+	return false, nil
+}
+
+func matchPattern(line string, pattern string, pos int) bool {
+	length := len(pattern)
+	linePos := pos
+
+	for i := 0; i < length; i++ {
+		if linePos >= len(line) {
+			return false
+		}
+
+		if pattern[i] == '\\' && i+1 < length {
+			ptrChr := pattern[i+1]
+			if ptrChr == 'w' && !(unicode.IsLetter(rune(line[linePos])) || unicode.IsDigit(rune(line[linePos])) || line[linePos] == '_') {
+				return false
+			} else if ptrChr == 'd' && !unicode.IsDigit(rune(line[linePos])) {
+				return false
+			} else {
+				i++
+			}
+		} else if pattern[i] == '[' {
+			closeSqrBracketPos := strings.IndexAny(pattern[i:], "]")
+			matchPattern := pattern[i+1 : closeSqrBracketPos]
+			if i+1 < length && pattern[i+1] == '^' {
+				if strings.Contains(matchPattern, string(line[linePos])) {
+					return false
+				}
+			} else {
+				if !strings.Contains(matchPattern, string(line[linePos])) {
+					return false
+				}
+			}
+			i = closeSqrBracketPos
+		} else { // base case
+			if line[linePos] != pattern[i] {
+				return false
+			}
+		}
+		linePos++
+	}
+
+	return true
 }
