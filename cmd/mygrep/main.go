@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"unicode"
 	"unicode/utf8"
 )
@@ -60,7 +61,16 @@ func matchLine(line []byte, pattern string) (bool, error) {
 		}
 		ok = checkStrLn > 0
 	} else if len(pattern) > 2 && pattern[0] == '[' && pattern[len(pattern)-1] == ']' {
-		ok = bytes.ContainsAny(line, pattern[1:len(pattern)-1])
+		if pattern[1] == '^' { // negative character group
+			strLine := string(line)
+			ptrn := pattern[2 : len(pattern)-1]
+			for _, char := range ptrn {
+				strLine = strings.ReplaceAll(strLine, string(char), "")
+			}
+			ok = len(strLine) > 0
+		} else { // positive character group
+			ok = bytes.ContainsAny(line, pattern[1:len(pattern)-1])
+		}
 	} else {
 		ok = bytes.ContainsAny(line, pattern)
 
