@@ -62,6 +62,7 @@ func matchPattern(line string, pattern string, pos int) bool {
 	lineIndex := pos
 
 	for i := 0; i < patternLength; i++ {
+		fmt.Println(i)
 		if lineIndex >= lineLength {
 			return pattern[i] == '$'
 		}
@@ -82,7 +83,9 @@ func matchPattern(line string, pattern string, pos int) bool {
 			} else if ptrChr == 'd' && !unicode.IsDigit(rune(line[lineIndex])) {
 				return false
 			} else {
-				i++
+				fmt.Println("\\ base case else")
+				i++ // Skip the letter
+				lineIndex++
 			}
 		} else if pattern[i] == '[' {
 			closeSqrBracketPos := strings.IndexAny(pattern[i:], "]")
@@ -97,12 +100,16 @@ func matchPattern(line string, pattern string, pos int) bool {
 				}
 			}
 			i = closeSqrBracketPos
+			fmt.Println("got here somehow")
 		} else { // base case
 			if !matchChar(line, lineIndex, pattern[i]) {
+				fmt.Printf("base case false %v %v\n", string(line[lineIndex]), pattern[i])
 				return false
 			}
 			lineIndex++
 		}
+		fmt.Printf("end of loop with i= %v\n", i)
+		fmt.Printf("end of loop with lineIndex= %v\n", lineIndex)
 	}
 
 	return true
