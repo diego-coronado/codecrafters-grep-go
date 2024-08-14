@@ -101,7 +101,6 @@ func matchPattern(line string, pattern string, pos int) bool {
 			i = closeSqrBracketPos
 		} else { // base case
 			if !matchChar(line, lineIndex, pattern[i]) {
-				fmt.Printf("base case false %v %v\n", string(line[lineIndex]), pattern[i])
 				return false
 			}
 			lineIndex++
