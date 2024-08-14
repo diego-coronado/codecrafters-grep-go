@@ -66,7 +66,16 @@ func matchPattern(line string, pattern string, pos int) bool {
 			return pattern[i] == '$'
 		}
 
-		if pattern[i] == '\\' && i+1 < patternLength {
+		if i+1 < patternLength && pattern[i+1] == '+' { // handling the + pattern
+			currentChar := pattern[i]
+			if !matchChar(line, lineIndex, currentChar) {
+				return false
+			}
+			for lineIndex < lineLength && matchChar(line, lineIndex, currentChar) {
+				lineIndex++
+			}
+			i++ // Skip the '+'
+		} else if pattern[i] == '\\' && i+1 < patternLength {
 			ptrChr := pattern[i+1]
 			if ptrChr == 'w' && !(unicode.IsLetter(rune(line[lineIndex])) || unicode.IsDigit(rune(line[lineIndex])) || line[lineIndex] == '_') {
 				return false
@@ -89,12 +98,19 @@ func matchPattern(line string, pattern string, pos int) bool {
 			}
 			i = closeSqrBracketPos
 		} else { // base case
-			if lineIndex < lineLength && line[lineIndex] != pattern[i] {
+			if !matchChar(line, lineIndex, pattern[i]) {
 				return false
 			}
+			lineIndex++
 		}
-		lineIndex++
 	}
 
 	return true
+}
+
+func matchChar(line string, lineIndex int, char byte) bool {
+	if char == '\\' {
+		return false // Should handle escapes like \w, \d, etc.
+	}
+	return line[lineIndex] == char
 }
