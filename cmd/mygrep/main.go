@@ -24,7 +24,7 @@ func main() {
 		os.Exit(2)
 	}
 
-	ok, err := matchLine(string(line), pattern)
+	ok, err := MatchLine(string(line), pattern)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(2)
@@ -38,7 +38,7 @@ func main() {
 	// default exit code is 0 which means success
 }
 
-func matchLine(line string, pattern string) (bool, error) {
+func MatchLine(line string, pattern string) (bool, error) {
 	if utf8.RuneCountInString(pattern) == 0 {
 		return false, fmt.Errorf("unsupported pattern: %q", pattern)
 	}
@@ -76,6 +76,12 @@ func matchPattern(line string, pattern string, pos int) bool {
 				lineIndex++
 			}
 			i++ // Skip the '+'
+		} else if i+1 < patternLength && pattern[i+1] == '?' {
+			currentChar := pattern[i]
+			if matchChar(line, lineIndex, currentChar) {
+				lineIndex++
+			}
+			i++
 		} else if pattern[i] == '\\' && i+1 < patternLength {
 			ptrChr := pattern[i+1]
 			if ptrChr == 'w' && !(unicode.IsLetter(rune(line[lineIndex])) || unicode.IsDigit(rune(line[lineIndex])) || line[lineIndex] == '_') {
