@@ -105,6 +105,8 @@ func matchPattern(line string, pattern string, pos int) bool {
 				}
 			}
 			i = closeSqrBracketPos
+		} else if pattern[i] == '.' {
+			lineIndex++
 		} else { // base case
 			if !matchChar(line, lineIndex, pattern[i]) {
 				return false
