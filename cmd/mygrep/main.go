@@ -62,7 +62,6 @@ func matchPattern(line string, pattern string, pos int) bool {
 	lineIndex := pos
 
 	for i := 0; i < patternLength; i++ {
-		fmt.Println(i)
 		if lineIndex >= lineLength {
 			return pattern[i] == '$'
 		}
@@ -107,6 +106,19 @@ func matchPattern(line string, pattern string, pos int) bool {
 			i = closeSqrBracketPos
 		} else if pattern[i] == '.' {
 			lineIndex++
+		} else if pattern[i] == '(' {
+			endPos := strings.Index(pattern[i:], ")")
+			if endPos == -1 {
+				return matchChar(line, lineIndex, pattern[i])
+			}
+			substr := pattern[i+1 : endPos]
+			parts := strings.Split(substr, "|")
+			for _, subPattern := range parts {
+				if matchPattern(line, subPattern, lineIndex) {
+					return true
+				}
+			}
+			return false
 		} else { // base case
 			if !matchChar(line, lineIndex, pattern[i]) {
 				return false
