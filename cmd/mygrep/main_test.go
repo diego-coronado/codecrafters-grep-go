@@ -50,9 +50,9 @@ func TestMatchLine(t *testing.T) {
 		{[]byte("a dog"), "a (cat|dog)", true},
 		{[]byte("a cow"), "a (cat|dog)", false},
 		{[]byte("a cat b"), "a (cat|dog) a", false},
-		// {[]byte("cat and cat"), "(cat) and \\1", true},
-		// {[]byte("cat and cat"), "(\\w+) and \\1", true},
-		// {[]byte("cat and dog"), "(\\w+) and \\1", false},
+		{[]byte("cat and cat"), "(cat) and \\1", true},
+		{[]byte("cat and cat"), "(\\w+) and \\1", true},
+		{[]byte("cat and dog"), "(\\w+) and \\1", false},
 	}
 
 	for _, tt := range matchLineTests {

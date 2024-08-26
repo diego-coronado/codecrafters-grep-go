@@ -13,6 +13,8 @@ const (
 	CharZeroOrOneTimes CharType = "zeroOrOne"
 	CharWildCard       CharType = "wildcard"
 	CharAlternation    CharType = "alternation"
+	CharCaptureGroup   CharType = "captureGroup"
+	CharBackReference  CharType = "backReference"
 )
 
 type Ch struct {
@@ -20,5 +22,7 @@ type Ch struct {
 	Value string
 
 	PrevCh           *Ch // Pointer to the previous Ch, used for the + operator
-	AlternateOptions []string
+	AlternateOptions [][]*Ch
+	GroupElements    []*Ch
+	GroupIndex       int
 }
