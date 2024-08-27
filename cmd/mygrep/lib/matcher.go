@@ -18,14 +18,14 @@ func popChFromChs(chs []*Ch) ([]*Ch, *Ch) {
 
 }
 
-type Matcher struct {
-	Chs           []*Ch
-	CaptureGroups []string
-}
-
 type Result struct {
 	Matched      bool
 	EndPositions []int
+}
+
+type Matcher struct {
+	Chs           []*Ch
+	CaptureGroups []string
 }
 
 func InitMatcher() *Matcher {
@@ -35,8 +35,8 @@ func InitMatcher() *Matcher {
 func (m *Matcher) ScanPatternInternal(pattern string) []*Ch {
 	chs := make([]*Ch, 0)
 
-	var i = 0
-	var groupIndex = 0
+	i := 0
+	groupIndex := 0
 
 	// detect start of string line anchor
 	if strings.HasPrefix(pattern, "^") {
@@ -47,7 +47,7 @@ func (m *Matcher) ScanPatternInternal(pattern string) []*Ch {
 		i++
 	}
 	for i < len(pattern) {
-		var currentChar = pattern[i]
+		currentChar := pattern[i]
 		var nextChar byte
 
 		if i+1 < len(pattern) {
@@ -73,13 +73,8 @@ func (m *Matcher) ScanPatternInternal(pattern string) []*Ch {
 			continue
 		}
 
-		// handle char class escape
 		if currentChar == '\\' && nextChar != '\\' {
-			chs = append(chs, &Ch{
-				Type:  CharEscape,
-				Value: string(currentChar) + string(nextChar),
-			})
-			if unicode.IsDigit(rune(currentChar)) {
+			if unicode.IsDigit(rune(nextChar)) {
 				chs = append(chs, &Ch{
 					Type:  CharBackReference,
 					Value: fmt.Sprintf("%c", nextChar),
@@ -87,7 +82,7 @@ func (m *Matcher) ScanPatternInternal(pattern string) []*Ch {
 			} else {
 				chs = append(chs, &Ch{
 					Type:  CharEscape,
-					Value: string(currentChar) + string(nextChar),
+					Value: fmt.Sprintf("%c%c", currentChar, nextChar),
 				})
 			}
 
@@ -183,7 +178,6 @@ func (m *Matcher) ScanPattern(pattern string) *Matcher {
 
 func (m *Matcher) Match(line []byte) bool {
 	if m.Chs[0].Type == CharStartAnchor {
-		// m.Chs = m.Chs[1:]
 		r := m.MatchLine(line, m.Chs[1:])
 		return r.Matched
 	}
@@ -197,23 +191,18 @@ func (m *Matcher) Match(line []byte) bool {
 }
 
 func (m *Matcher) MatchLine(line []byte, chs []*Ch) *Result {
-	fmt.Printf("start matchline\n")
-	var i int
+	i := 0
 	res := &Result{
 		Matched:      true,
 		EndPositions: make([]int, 0),
 	}
 
 	for ind, ch := range chs {
-		// check for $ if it is the end of the line
-		// fmt.Printf("current ch val %v\n", ch.Value)
-		// fmt.Printf("current ch type %v\n", ch.Type)
-
 		if i >= len(line) {
-			// fmt.Printf("end of line %v\n", ch.Value)
 
-			if ch.Type == CharZeroOrOneTimes {
+			if ch.Type == CharEndAnchor {
 				res.EndPositions = append(res.EndPositions, i)
+				break
 			}
 
 			res.Matched = false
@@ -230,10 +219,9 @@ func (m *Matcher) MatchLine(line []byte, chs []*Ch) *Result {
 		case CharEndAnchor:
 			res.Matched = false
 		case CharOneOrMoreTimes:
-			var hasMatched bool
-
+			hasMatched := false
 			for j := i; j < len(line) && m.MatchBasic(line[j], ch.PrevCh); j++ {
-				if recRes := m.MatchLine(line[j+1:], m.Chs[ind+1:]); recRes.Matched {
+				if recRes := m.MatchLine(line[j+1:], chs[ind+1:]); recRes.Matched {
 					for _, endPos := range recRes.EndPositions {
 						res.EndPositions = append(res.EndPositions, j+1+endPos)
 					}
@@ -260,16 +248,17 @@ func (m *Matcher) MatchLine(line []byte, chs []*Ch) *Result {
 			}
 			res.Matched = false
 			return res
+		case CharWildCard:
+			i++
+			continue
 		case CharAlternation:
-			var recRes bool
+			recRes := false
 			for _, alterValue := range ch.AlternateOptions {
-
 				if matchedAlter := m.MatchLine(line[i:], alterValue); matchedAlter.Matched {
 					for _, endPosAlter := range matchedAlter.EndPositions {
 						nextI := i + endPosAlter
 
 						m.CaptureGroups[ch.GroupIndex] = string(line[i:nextI])
-
 						if mr := m.MatchLine(line[nextI:], chs[ind+1:]); mr.Matched {
 							for _, endPos := range mr.EndPositions {
 								res.EndPositions = append(res.EndPositions, nextI+endPos)
@@ -287,7 +276,6 @@ func (m *Matcher) MatchLine(line []byte, chs []*Ch) *Result {
 		case CharCaptureGroup:
 
 			sr := false
-			fmt.Println("capture group", len(ch.GroupElements))
 			if mg := m.MatchLine(line[i:], ch.GroupElements); mg.Matched {
 				for _, mgEnd := range mg.EndPositions {
 					m.CaptureGroups[ch.GroupIndex] = string(line[i : i+mgEnd])
@@ -342,11 +330,11 @@ func (m *Matcher) MatchBasic(currChar byte, ch *Ch) bool {
 			}
 		}
 	case CharPosGroup:
-		if !bytes.ContainsAny([]byte{currChar}, ch.Value) {
+		if bytes.ContainsAny([]byte{currChar}, ch.Value) {
 			return true
 		}
 	case CharNegGroup:
-		if bytes.ContainsAny([]byte{currChar}, ch.Value) {
+		if !bytes.ContainsAny([]byte{currChar}, ch.Value) {
 			return true
 		}
 
