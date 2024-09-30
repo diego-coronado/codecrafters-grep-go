@@ -24,19 +24,27 @@ type Result struct {
 }
 
 type Matcher struct {
-	Chs           []*Ch
-	CaptureGroups []string
+	Chs               []*Ch
+	CaptureGroups     []string
+	CaptureGroupCount int
 }
 
 func InitMatcher() *Matcher {
 	return &Matcher{}
 }
 
+func (m *Matcher) peek(pattern string, i int) byte {
+	if i+1 < len(pattern) {
+		return pattern[i+1]
+	}
+	return 0
+
+}
+
 func (m *Matcher) ScanPatternInternal(pattern string) []*Ch {
 	chs := make([]*Ch, 0)
 
 	i := 0
-	groupIndex := 0
 
 	// detect start of string line anchor
 	if strings.HasPrefix(pattern, "^") {
@@ -48,11 +56,7 @@ func (m *Matcher) ScanPatternInternal(pattern string) []*Ch {
 	}
 	for i < len(pattern) {
 		currentChar := pattern[i]
-		var nextChar byte
-
-		if i+1 < len(pattern) {
-			nextChar = pattern[i+1]
-		}
+		nextChar := m.peek(pattern, i)
 
 		if currentChar == '$' && i == len(pattern)-1 {
 			chs = append(chs, &Ch{
@@ -109,11 +113,29 @@ func (m *Matcher) ScanPatternInternal(pattern string) []*Ch {
 		}
 
 		if currentChar == '(' {
-			endPos := strings.Index(pattern[i:], ")")
+			endPos := -1
+			hasNestedCaptureGroup := false
+
+			for j := i + 1; j < len(pattern); {
+				if pattern[j] == '(' {
+					nextRight := strings.Index(pattern[j:], ")")
+					j = j + nextRight + 1
+					hasNestedCaptureGroup = true
+					continue
+				} else if pattern[j] == ')' {
+					endPos = j
+					break
+				} else {
+					j++
+				}
+
+			}
+
 			if endPos != -1 {
-				groupIndex = groupIndex + 1
-				alterStrList := strings.Split(pattern[i+1:i+endPos], "|")
-				if len(alterStrList) > 1 {
+				m.CaptureGroupCount = m.CaptureGroupCount + 1
+				groupIndex := m.CaptureGroupCount
+				alterStrList := strings.Split(pattern[i+1:endPos], "|")
+				if len(alterStrList) > 1 && !hasNestedCaptureGroup {
 					ch := &Ch{
 						Type:             CharAlternation,
 						Value:            "",
@@ -129,16 +151,16 @@ func (m *Matcher) ScanPatternInternal(pattern string) []*Ch {
 				} else {
 					chs = append(chs, &Ch{
 						Type:             CharCaptureGroup,
-						Value:            pattern[i+1 : i+endPos],
+						Value:            pattern[i+1 : endPos],
 						AlternateOptions: nil,
-						GroupElements:    m.ScanPatternInternal(pattern[i+1 : i+endPos]),
+						GroupElements:    m.ScanPatternInternal(pattern[i+1 : endPos]),
 						GroupIndex:       groupIndex,
 					})
 				}
 
 				m.CaptureGroups = append(m.CaptureGroups, "")
 
-				i = i + endPos + 1
+				i = endPos + 1
 
 				continue
 			}
@@ -171,6 +193,7 @@ func (m *Matcher) ScanPatternInternal(pattern string) []*Ch {
 }
 
 func (m *Matcher) ScanPattern(pattern string) *Matcher {
+	m.CaptureGroupCount = 0
 	m.CaptureGroups = make([]string, 1)
 	m.Chs = m.ScanPatternInternal(pattern)
 	return m
